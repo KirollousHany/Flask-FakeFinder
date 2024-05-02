@@ -1,4 +1,3 @@
-import tempfile
 from flask import Flask, request, jsonify, url_for, send_file
 from TTS.api import TTS
 import os
@@ -16,14 +15,11 @@ def convert_voices(source_wav, target_wav):
     output_voice = tts.voice_conversion(source_wav=source_wav, target_wav=target_wav)
     
     # Save the output voice to a temporary file
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
-        # Check if tts object and its config attribute are not None
-        if tts and tts.config:
-            sampling_rate = tts.config.get('sampling_rate', 22050)  # Default to 22050 if not available
-        else:
-            sampling_rate = 22050
-        wavfile.write(temp_file.name, sampling_rate, (output_voice * 32767.0).astype('int16'))
-        audio_url = url_for('get_output_voice', filename=temp_file.name)  # Generate URL
+    with open("output_voice.wav", "wb") as output_file:
+        sampling_rate = 22050  # Default sampling rate
+        wavfile.write(output_file, sampling_rate, (output_voice * 32767.0).astype('int16'))
+    
+    audio_url = url_for('get_denoised_audio', filename="output_voice.wav")  # Generate URL
     
     return audio_url
 
@@ -37,8 +33,8 @@ def voice_conversion():
     target_wav = request.files['target_voice']
     
     # Save source and target voice files
-    source_wav_path = os.path.join(tempfile.gettempdir(), "source_voice.wav")
-    target_wav_path = os.path.join(tempfile.gettempdir(), "target_voice.wav")
+    source_wav_path = "source_voice.wav"
+    target_wav_path = "target_voice.wav"
     source_wav.save(source_wav_path)
     target_wav.save(target_wav_path)
     
@@ -67,10 +63,10 @@ def convert_voices_new(text, speaker_wav, language):
     sampling_rate, output_voice = wavfile.read(output_voice_path)
     
     # Save the output voice to a temporary file
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
-        # Get the sampling rate from the input wav
-        wavfile.write(temp_file.name, sampling_rate, output_voice)
-        audio_url = url_for('get_output_voice', filename=temp_file.name)  # Generate URL
+    with open("output_voice.wav", "wb") as output_file:
+        wavfile.write(output_file, sampling_rate, output_voice)
+    
+    audio_url = url_for('get_denoised_audio', filename="output_voice.wav")  # Generate URL
     
     return audio_url
 
@@ -85,7 +81,7 @@ def voice_conversion_new():
     language = request.form['language']
     
     # Save source voice file
-    source_wav_path = os.path.join(tempfile.gettempdir(), "source_voice.wav")
+    source_wav_path = "source_voice.wav"
     source_wav.save(source_wav_path)
     
     # Perform voice conversion
@@ -100,15 +96,6 @@ def voice_conversion_new():
         'output_voice_url': output_voice_url
     })
 
-@app.route('/get_output_voice/<filename>')
-def get_output_voice(filename):
-    """
-    Serves the output voice file based on the filename.
-    """
-    try:
-        return send_file(filename, mimetype='audio/wav')
-    except FileNotFoundError:
-        return jsonify({'error': 'Output voice file not found'}), 404
     
 @app.route('/reduce_noise', methods=['POST'])
 def reduce_noise_api():
@@ -135,9 +122,9 @@ def reduce_noise_api():
     return jsonify({'error': f'Error during noise reduction: {str(e)}'}), 500
 
   # Save denoised audio to temporary file
-  with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
-    wavfile.write(temp_file.name, rate, reduced_noise)
-    audio_url = url_for('get_denoised_audio', filename=temp_file.name)  # Generate URL
+  with open("denoised_audio.wav", "wb") as output_file:
+    wavfile.write(output_file, rate, reduced_noise)
+    audio_url = url_for('get_denoised_audio', filename="denoised_audio.wav")  # Generate URL
 
   # Return success message with audio data information and URL
   return jsonify({
@@ -161,3 +148,6 @@ def get_denoised_audio(filename):
   except FileNotFoundError:
     return jsonify({'error': 'Denoised audio file not found'}), 404
 
+
+if __name__ == '__main__':
+    app.run(debug=True, host='192.168.1.5')

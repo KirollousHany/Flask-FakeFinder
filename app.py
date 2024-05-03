@@ -4,8 +4,12 @@ import os
 from scipy.io import wavfile
 import librosa
 import noisereduce as nr
+from flask_cors import CORS
 
 app = Flask(__name__)
+
+CORS(app)
+#cors = CORS(app, resources={r"/api/": {"origins": ""}})
 
 def convert_voices(source_wav, target_wav):
     # Initialize TTS model
@@ -147,7 +151,3 @@ def get_denoised_audio(filename):
     return audio_data, 200, {'Content-Type': 'audio/wav'}
   except FileNotFoundError:
     return jsonify({'error': 'Denoised audio file not found'}), 404
-
-
-if __name__ == '__main__':
-    app.run(debug=True, host='192.168.1.5')

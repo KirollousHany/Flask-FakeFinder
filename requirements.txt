@@ -1,11 +1,4 @@
-Flask
-request
-jsonify
-url_for
-send_file
-TTS
-os
-wavfile
-noisereduce 
-librosa
-Gunicorn
+Flask==3.0.3
+scipy==1.11.4
+librosa==0.10.0
+noisereduce==3.0.2
